@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SoundCloud Desktop</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- Official SoundCloud Widget API -->
+  <script src="https://w.soundcloud.com/player/api.js"></script>
+</head>
+<body class="theme-dark">
+  <!-- Draggable Custom Title Bar -->
+  <header class="titlebar">
+    <div class="titlebar-drag-region">
+      <div class="app-brand">
+        <svg class="sc-logo" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.8 9.5c-.3 0-.6.1-.8.2C17.3 6.9 14.8 5 12 5c-3.1 0-5.7 2.2-6.3 5.1C2.5 10.6 0 13 0 16c0 3.3 2.7 6 6 6h12.5c3 0 5.5-2.5 5.5-5.5s-2.3-5.5-5.2-7z"/>
+        </svg>
+        <span class="app-title">SOUNDCLOUD</span>
+      </div>
+
+      <!-- Quick URL or Search Bar in Titlebar -->
+      <div class="search-container">
+        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="global-search-input" placeholder="Search tracks, or paste any SoundCloud artist/track link..." />
+        <button id="btn-quick-play" title="Play or Load URL">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </button>
+      </div>
+
+      <!-- Window Controls -->
+      <div class="window-controls">
+        <button id="btn-mini-mode" class="win-btn" title="Toggle Mini Player (Picture-in-Picture)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+            <rect x="12" y="9" width="8" height="6" rx="1" fill="currentColor"></rect>
+          </svg>
+        </button>
+        <button id="btn-win-min" class="win-btn" title="Minimize">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button id="btn-win-max" class="win-btn" title="Maximize">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1"></rect></svg>
+        </button>
+        <button id="btn-win-close" class="win-btn win-close" title="Close (Hide to Tray)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main App Layout (Hidden in Mini Mode) -->
+  <div class="app-body" id="app-body">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <nav class="nav-menu">
+        <div class="nav-section-title">DISCOVER</div>
+        <button class="nav-item active" data-view="discover">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 14.88L8.88 15 11 10.12 15.12 9 13 13.88z"/></svg>
+          Trending & Vibes
+        </button>
+        <button class="nav-item" data-view="search">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+          Search Library
+        </button>
+
+        <div class="nav-section-title">YOUR MUSIC</div>
+        <button class="nav-item" data-view="queue">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3-5-3z"/></svg>
+          Play Queue <span class="queue-badge" id="sidebar-queue-count">0</span>
+        </button>
+        <button class="nav-item" data-view="favorites">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          Liked Tracks <span class="badge" id="sidebar-liked-count">0</span>
+        </button>
+        <button class="nav-item" data-view="history">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+          Recently Played
+        </button>
+
+        <!-- Dynamic Artists Section -->
+        <div class="nav-section-title">ARTISTS</div>
+        <div id="sidebar-artists-list" class="sidebar-artists-list">
+          <!-- Populated dynamically with artist avatars and names -->
+        </div>
+      </nav>
+
+      <!-- URL Paste Card in Sidebar -->
+      <div class="sidebar-quick-card">
+        <div class="quick-card-title">Paste Artist or Track URL</div>
+        <p class="quick-card-desc">Paste an artist profile to pin their music to the left</p>
+        <div class="url-input-wrap">
+          <input type="text" id="sidebar-url-input" placeholder="https://soundcloud.com/artist" />
+          <button id="btn-sidebar-play-url">Load</button>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="sidebar-footer">
+        <span class="status-indicator online"></span>
+        <span class="status-text">SoundCloud Desktop Connected</span>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-view">
+      <!-- Discover View -->
+      <section id="view-discover" class="view-panel active">
+        <div class="view-hero">
+          <div class="hero-content">
+            <span class="hero-tag">FEATURED MIX</span>
+            <h1 class="hero-title" id="hero-title">Chill Vibes & Lo-Fi Beats</h1>
+            <p class="hero-desc">Relax, study, and vibe with seamless off-browser SoundCloud audio.</p>
+            <div class="hero-actions">
+              <button class="btn-primary" id="btn-hero-play">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                Play Now
+              </button>
+              <button class="btn-secondary" id="btn-hero-queue">Add to Queue</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Genre Pill Filter -->
+        <div class="filter-bar">
+          <button class="filter-pill active" data-genre="all">All Genres</button>
+          <button class="filter-pill" data-genre="lofi">Lo-Fi & Chill</button>
+          <button class="filter-pill" data-genre="electronic">Electronic / EDM</button>
+          <button class="filter-pill" data-genre="synthwave">Synthwave</button>
+          <button class="filter-pill" data-genre="hiphop">Hip Hop</button>
+          <button class="filter-pill" data-genre="gaming">Gaming & NCS</button>
+          <button class="filter-pill" data-genre="ambient">Ambient / Sleep</button>
+        </div>
+
+        <h2 class="section-title">Trending Tracks & Curated Sets</h2>
+        <div class="track-grid" id="discover-track-grid">
+          <!-- Populated by renderer.js -->
+        </div>
+      </section>
+
+      <!-- Artist Dedicated View -->
+      <section id="view-artist" class="view-panel">
+        <div class="artist-hero" id="artist-hero">
+          <div class="artist-hero-backdrop" id="artist-hero-backdrop"></div>
+          <div class="artist-hero-inner">
+            <img src="" id="artist-avatar" class="artist-avatar-lg" alt="Artist Avatar" />
+            <div class="artist-meta">
+              <div class="artist-badge">SOUNDCLOUD ARTIST</div>
+              <h1 class="artist-name" id="artist-name">Artist Name</h1>
+              <p class="artist-bio" id="artist-bio"></p>
+              <div class="artist-actions">
+                <button class="btn-primary" id="btn-artist-play-all">
+                  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                  Play All
+                </button>
+                <button class="btn-secondary" id="btn-artist-shuffle">
+                  <svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;margin-right:6px;"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+                  Shuffle
+                </button>
+                <button class="btn-secondary" id="btn-artist-queue-all">Add All to Queue</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-header">
+          <h2 class="section-title">Tracks & Releases (<span id="artist-tracks-count">0</span>)</h2>
+          <input type="text" id="artist-search-filter" class="table-search-filter" placeholder="Filter artist tracks..." />
+        </div>
+
+        <div class="track-list" id="artist-track-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- Search View -->
+      <section id="view-search" class="view-panel">
+        <div class="section-header">
+          <h2 class="section-title" id="search-results-heading">Search SoundCloud</h2>
+        </div>
+        <div class="track-list" id="search-results-list">
+          <div class="empty-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <h3>Discover Anything on SoundCloud</h3>
+            <p>Type a song, artist, playlist name, or paste a link in the search bar above.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Queue View -->
+      <section id="view-queue" class="view-panel">
+        <div class="section-header">
+          <h2 class="section-title">Play Queue</h2>
+          <div class="queue-actions">
+            <button class="btn-secondary btn-sm" id="btn-clear-queue">Clear Queue</button>
+          </div>
+        </div>
+        <div class="track-list" id="queue-track-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- Favorites View -->
+      <section id="view-favorites" class="view-panel">
+        <div class="section-header">
+          <h2 class="section-title">Liked Tracks</h2>
+        </div>
+        <div class="track-list" id="favorites-track-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+
+      <!-- History View -->
+      <section id="view-history" class="view-panel">
+        <div class="section-header">
+          <h2 class="section-title">Recently Played</h2>
+          <button class="btn-secondary btn-sm" id="btn-clear-history">Clear History</button>
+        </div>
+        <div class="track-list" id="history-track-list">
+          <!-- Populated dynamically -->
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Mini Player Mode View (Active only when mini mode is enabled) -->
+  <div class="mini-player-overlay" id="mini-player-container">
+    <div class="mini-content">
+      <img src="" id="mini-artwork" class="mini-art" alt="Art" />
+      <div class="mini-meta">
+        <div class="mini-title" id="mini-title">No Track Playing</div>
+        <div class="mini-artist" id="mini-artist">SoundCloud Desktop</div>
+        <div class="mini-progress-bar">
+          <div class="mini-progress-fill" id="mini-progress-fill"></div>
+        </div>
+      </div>
+      <div class="mini-controls">
+        <button id="btn-mini-prev" class="ctrl-btn-mini" title="Previous">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button id="btn-mini-play" class="ctrl-btn-mini play-mini" title="Play/Pause">
+          <svg id="mini-icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="mini-icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        <button id="btn-mini-next" class="ctrl-btn-mini" title="Next">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+        <button id="btn-mini-restore" class="ctrl-btn-mini" title="Exit Mini Mode">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 3 21 3 21 9"></polyline>
+            <polyline points="9 21 3 21 3 15"></polyline>
+            <line x1="21" y1="3" x2="14" y2="10"></line>
+            <line x1="3" y1="21" x2="10" y2="14"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Player Bar (Normal Mode) -->
+  <footer class="player-bar" id="player-bar">
+    <!-- Left: Track Details -->
+    <div class="now-playing">
+      <div class="artwork-wrapper">
+        <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&auto=format&fit=crop&q=60" id="current-art" class="now-playing-art" alt="Art" />
+        <div class="sound-wave-anim" id="sound-wave-anim">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+      <div class="track-info">
+        <div class="track-title" id="player-title">Welcome to SoundCloud Desktop</div>
+        <div class="track-artist" id="player-artist">Pick a track or paste an artist link</div>
+      </div>
+      <button class="btn-icon heart-btn" id="btn-like-current" title="Save to Liked Tracks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+        </svg>
+      </button>
+      <button class="btn-icon" id="btn-queue-current" title="Add to Queue">
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:17px;height:17px;">
+          <path d="M14 10H3v2h11v-2zm0-4H3v2h11V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM3 16h7v-2H3v2z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Center: Playback Controls & Progress Scrubber -->
+    <div class="player-center">
+      <div class="player-controls">
+        <button class="btn-icon" id="btn-shuffle" title="Shuffle (S)">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-prev" title="Previous Track (P)">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+        </button>
+        <button class="btn-play-pause" id="btn-play-pause" title="Play/Pause (Space)">
+          <svg id="icon-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icon-pause" viewBox="0 0 24 24" fill="currentColor" style="display: none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-next" title="Next Track (N)">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+        </button>
+        <button class="btn-icon" id="btn-repeat" title="Repeat (R)">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+        </button>
+      </div>
+
+      <!-- Scrubber -->
+      <div class="progress-container">
+        <span class="time-label" id="current-time">0:00</span>
+        <div class="progress-bar-wrapper" id="progress-wrapper">
+          <div class="progress-track" id="progress-track">
+            <div class="progress-fill" id="progress-fill"></div>
+            <div class="progress-handle" id="progress-handle"></div>
+          </div>
+        </div>
+        <span class="time-label" id="total-time">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right: Volume & Extra Controls -->
+    <div class="player-right">
+      <!-- Visualizer Canvas -->
+      <canvas id="visualizer-canvas" width="70" height="24" title="Audio Visualizer"></canvas>
+
+      <button class="btn-icon" id="btn-volume-icon" title="Mute/Unmute (M)">
+        <svg id="vol-high" viewBox="0 0 24 24" fill="currentColor"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+        <svg id="vol-muted" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+      </button>
+      <input type="range" id="volume-slider" min="0" max="100" value="80" class="volume-slider" title="Volume" />
+
+      <button class="btn-icon" id="btn-toggle-queue" title="View Queue">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 10h12v2H4zm0-4h12v2H4zm0 8h8v2H4zm10 0v6l5-3-5-3z"/></svg>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Toast Notification -->
+  <div id="toast-notify" class="toast-notify"></div>
+
+  <!-- Hidden SoundCloud Widget Frame -->
+  <iframe id="sc-widget-frame" allow="autoplay" src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/293&auto_play=false" style="display:none; width:0; height:0; border:0;"></iframe>
+
+  <script src="sc-engine.js"></script>
+  <script src="renderer.js"></script>
+</body>
+</html>

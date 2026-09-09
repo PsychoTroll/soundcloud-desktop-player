@@ -1,0 +1,22 @@
+{
+  "name": "soundcloud-desktop-player",
+  "version": "1.0.0",
+  "description": "A standalone, off-browser desktop SoundCloud player for Windows",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [
+    "soundcloud",
+    "music",
+    "player",
+    "desktop",
+    "electron"
+  ],
+  "author": "Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-packager": "^17.1.2"
+  }
+}
